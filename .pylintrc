@@ -1,0 +1,27 @@
+# --------------------------------------------------------------------------------------------
+# Use `pylint --help-msg=W0232` to get the more readable form and a definition of this error
+# --------------------------------------------------------------------------------------------
+# C0103: Invalid Name: False positive whenever we create a logger.
+# C0301: Line too long: Not a blocker for now but should clean this up.
+# C0330: Bad continuation: False positive - https://github.com/PyCQA/pylint/issues/289.  Triggered by Black.
+# C0411: Wrong import order:  Using flake8-import-order to manage imports
+# C0412: Ungrouped imports:  Using flake8-import-order to manage imports
+# R0201: Method could be a function: Grouping Pytest functions under test classes cause this error.
+# R0801: Similar lines in 2 files: Useful, causes issue with future imports.
+# R0902: too many class attributes
+# R0903: Too few public methods
+# R0904: Too many public methods
+# R0913: Too many arguments
+# R0914: Too many local variables
+# W0232: Class has no __init__ method: Abstract classes can't have init.
+# W0511: Used when a warning note as FIXME or XXX is detected (e.g. TODO: ...).
+# W0621: Redefining name '...' from outer scope: Pytest parametrizes fixtures and causes this error.
+
+[MESSAGES CONTROL]
+disable=C0103,C0301,C0330,C0411,C0412,R0201,R0801,R0902,R0903,R0904,R0913,R0914,W0232,W0511,W0621
+
+[REPORTS]
+output-format=colorized
+reports=y
+include-ids=yes
+msg-template='{msg_id}:{line:3d},{column}: {obj}: {msg}'

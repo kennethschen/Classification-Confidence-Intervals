@@ -1,0 +1,18 @@
+[run]
+branch = True
+source =
+  classificationconfidenceintervals/
+  tests/
+omit =
+  */version.py
+
+[paths]
+source =
+  classificationconfidenceintervals/
+
+[report]
+show_missing = True
+fail_under = 100
+exclude_lines =
+  pragma: no cover
+  if TYPE_CHECKING:

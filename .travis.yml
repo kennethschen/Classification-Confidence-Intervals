@@ -1,0 +1,30 @@
+language: python
+python: 3.7   
+before_install: pip install tox-travis codecov
+
+jobs:
+  include:
+    - stage: Test
+      name: Unit Tests and Coverage
+      env: TOXENV=py37
+      script:
+        - tox
+        - codecov --file coverage.xml --disable search
+    - name: Style
+      env: TOXENV=style
+      script: tox
+    - name: Format
+      env: TOXENV=format
+      script: tox
+    - name: Type
+      env: TOXENV=type
+      script: tox
+    - stage: Deploy
+      name: PyPI
+      if: (branch = master AND type != pull_request)
+      script:
+        - git config --global user.name "semantic-release (via TravisCI)"
+        - git config --global user.email "semantic-release@travis"
+        - pip install python-semantic-release
+        - semantic-release publish
+
