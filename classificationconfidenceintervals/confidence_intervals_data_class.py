@@ -18,7 +18,17 @@ from .read_only_properties_decorator import read_only_properties
 )
 @dataclass
 class CIDataClass:
-    """Confidence Intervals Data Class."""
+    """Confidence Intervals Data Class.
+
+    Attributes:
+        tnorm_ci (tuple): Truncated normal confidence interval.
+        poisson_ci (tuple): Poisson confidence interval.
+        lrt_ci (tuple): Inverted binomial likelihood ratio test confidence interval.
+        score_ci (tuple): Inverted binomial score test confidence interval.
+        posterior_ci (tuple): Beta-Binomial posterior confidence interval.
+        simulated_ci (tuple): Beta-Binomial Monte Carlo confidence interval.
+
+    """
 
     tnorm_ci: Tuple[float, float]
     poisson_ci: Tuple[float, float]
