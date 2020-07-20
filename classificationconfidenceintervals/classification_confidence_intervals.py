@@ -29,21 +29,19 @@ from .read_only_properties_decorator import read_only_properties
     "exact_precision",
     "n",
     "n_flagged",
-    "n_positives",
-    "n_predicted_negatives",
-    "n_true_negatives",
-    "n_true_positives",
-    "negative_predictive_dist_poisson",
-    "negative_predictive_dist_posterior",
-    "negative_predictive_dist_tnorm",
-    "positives_dist_poisson",
-    "positives_dist_posterior",
-    "positives_dist_tnorm",
-    "precision_dist_poisson",
-    "precision_dist_posterior",
-    "precision_dist_tnorm",
-    "sample_labels",
-    "sample_predictions",
+    "n_pos",
+    "n_pred_neg",
+    "n_true_neg",
+    "n_true_pos",
+    "npv_dist_poisson",
+    "npv_dist_posterior",
+    "npv_dist_tnorm",
+    "pos_dist_poisson",
+    "pos_dist_posterior",
+    "pos_dist_tnorm",
+    "ppv_dist_poisson",
+    "ppv_dist_posterior",
+    "ppv_dist_tnorm",
 )
 class ClassificationConfidenceIntervals:
     """Class for determining confidence intervals for classification metrics."""
@@ -70,6 +68,36 @@ class ClassificationConfidenceIntervals:
             confidence_level (float): Confidence level, equal to area desired under curve.
             exact_precision (float): If provided, the actual population precision.
 
+        Attributes:
+            N (int): Population size.
+            N_flagged (int): Population flagged count.
+            alpha (float): Confidence level.
+            exact_precision (float): If provided, the actual population precision.
+            n (int): Sample size.
+            n_flagged (int): Sample flagged count.
+            n_pos (int): Sample positives count.
+            n_pred_neg (int): Sample predicted negatives count.
+            n_true_neg (int): Sample true negatives count.
+            n_true_pos (int): Sample true positives count.
+            npv_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted poisson distribution for negative predictive value.
+            npv_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted posterior distribution for negative predictive value.
+            npv_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted truncated normal distribution for negative predictive value.
+            pos_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted poisson distribution for positive rate.
+            pos_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted posterior distribution for positive rate.
+            pos_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted truncated normal distribution for positive rate.
+            ppv_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted poisson distribution for precision.
+            ppv_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted posterior distribution for precision.
+            ppv_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted truncated normal distribution for precision.
+
         """
         check_init_params(
             sample_labels,
@@ -80,31 +108,14 @@ class ClassificationConfidenceIntervals:
             exact_precision,
         )
 
-        self.get_sample_counts(sample_labels, sample_predictions)
-
         self.N = population_size
         self.N_flagged = population_flagged_count
         self.alpha = confidence_level
         self.exact_precision = exact_precision
 
-        self.get_sample_distributions()
-
-    def get_sample_counts(
-        self, sample_labels: List[Union[bool, int]], sample_predictions: List[Union[bool, int]]
-    ) -> None:
-        """Get sample counts and successes for positives, precision, and negative predictive value.
-
-        Args:
-            sample_labels (list): Binary labels of datapoints in sample, with labels as boolean or
-                binary in [0,1] or in [-1,1].
-            sample_predictions (list): Binary labels of datapoints in sample flagged as positives
-                by algorithm, with labels as boolean or binary in [0,1] or in [-1,1].
-
-        """
         sample_labels = np.array(sample_labels)
         sample_predictions = np.array(sample_predictions)
 
-        # pylint: disable=W0201
         self.n = len(sample_labels)
         self.n_pos = sum(sample_labels)
 
@@ -113,53 +124,58 @@ class ClassificationConfidenceIntervals:
 
         self.n_pred_neg = self.n - self.n_flagged
         self.n_true_neg = self.n_pred_neg - (self.n_pos - self.n_true_pos)
-        # pylint: disable=W0201
 
-    def get_sample_distributions(self) -> None:
-        """Get parametric distributions for positives, precision, and negative predictive value."""
-        # pylint: disable=W0201
-        # positive rate distributions based on binomial distribution approximations
-        pos_phat = self.n_pos / self.n
-        pos_sigmahat = np.sqrt(pos_phat * (1 - pos_phat) / self.n)
-        self.pos_dist_tnorm = st.truncnorm(
-            a=(pos_phat - 1) / pos_sigmahat,
-            b=pos_phat / pos_sigmahat,
-            loc=pos_phat,
-            scale=pos_sigmahat,
-        )
-        self.pos_dist_poisson = st.poisson(self.n_pos)
+        (
+            self.pos_dist_tnorm,
+            self.pos_dist_poisson,
+            self.pos_dist_posterior,
+        ) = self.get_parametric_distributions(self.n_pos, self.n)
+        (
+            self.ppv_dist_tnorm,
+            self.ppv_dist_poisson,
+            self.ppv_dist_posterior,
+        ) = self.get_parametric_distributions(self.n_true_pos, self.n_flagged)
+        (
+            self.npv_dist_tnorm,
+            self.npv_dist_poisson,
+            self.npv_dist_posterior,
+        ) = self.get_parametric_distributions(self.n_true_neg, self.n_pred_neg)
 
-        # precision distributions based on binomial distribution approximations
-        ppv_phat = self.n_true_pos / self.n_flagged
-        ppv_sigmahat = np.sqrt(ppv_phat * (1 - ppv_phat) / self.n_flagged)
-        self.precision_dist_tnorm = st.truncnorm(
-            a=(ppv_phat - 1) / ppv_sigmahat,
-            b=ppv_phat / ppv_sigmahat,
-            loc=ppv_phat,
-            scale=ppv_sigmahat,
-        )
-        self.ppv_dist_poisson = st.poisson(self.n_true_pos)
+    @staticmethod
+    def get_parametric_distributions(
+        successes: int, size: int
+    ) -> Tuple[
+        st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
+        st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
+        st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
+    ]:
+        """Get parametric distributions for given metric.
 
-        # negative predictive value distributions based on binomial distribution approximations
-        npv_phat = self.n_true_neg / self.n_pred_neg
-        npv_sigmahat = np.sqrt(npv_phat * (1 - npv_phat) / self.n_pred_neg)
-        self.npv_dist_tnorm = st.truncnorm(
-            a=(npv_phat - 1) / npv_sigmahat,
-            b=npv_phat / npv_sigmahat,
-            loc=npv_phat,
-            scale=npv_sigmahat,
-        )
-        self.npv_dist_poisson = st.poisson(self.n_true_neg)
+        Args:
+            successes (int): Number of successes in relevant sample.
+            size (int): Size of relevant sample.
 
-        # posterior distributions with flat priors
-        self.pos_dist_posterior = st.beta(a=0.5 + self.n_pos, b=0.5 + self.n - self.n_pos)
-        self.ppv_dist_posterior = st.beta(
-            a=0.5 + self.n_true_pos, b=0.5 + self.n_flagged - self.n_true_pos
+        Returns:
+            metric_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted truncated normal distribution for metric.
+            metric_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted poisson distribution for metric.
+            metric_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted posterior distribution for metirc.
+
+        """
+
+        phat = successes / size
+        sigmahat = np.sqrt(phat * (1 - phat) / size)
+        metric_dist_tnorm = st.truncnorm(
+            a=(phat - 1) / sigmahat, b=phat / sigmahat, loc=phat, scale=sigmahat,
         )
-        self.npv_dist_posterior = st.beta(
-            a=0.5 + self.n_true_neg, b=0.5 + self.n_pred_neg - self.n_true_neg,
-        )
-        # pylint: disable=W0201
+
+        metric_dist_poisson = st.poisson(successes)
+
+        metric_dist_posterior = st.beta(a=0.5 + successes, b=0.5 + size - successes)
+
+        return metric_dist_tnorm, metric_dist_poisson, metric_dist_posterior
 
     def get_cis(
         self, n_iters: int = 1000000, plot_filename: str = ""
@@ -226,7 +242,7 @@ class ClassificationConfidenceIntervals:
         # pylint: disable=W0201
 
     def get_pos_rate_cis(self) -> CIDataClass:
-        """Get confidence intervals for probability of being a positive.
+        """Get confidence intervals for positive rate.
 
         Returns:
             pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple methods.
@@ -249,7 +265,7 @@ class ClassificationConfidenceIntervals:
 
         """
         return CIDataClass(
-            self.precision_dist_tnorm.interval(self.alpha),
+            self.ppv_dist_tnorm.interval(self.alpha),
             self.binomial_poisson_approx_ci(self.n_flagged, self.ppv_dist_poisson, self.alpha),
             self.binomial_likelihood_ratio_test_ci(self.n_flagged, self.n_true_pos, self.alpha),
             self.binomial_score_test_ci(self.n_flagged, self.n_true_pos, self.alpha),
@@ -342,7 +358,7 @@ class ClassificationConfidenceIntervals:
             ("Truncated-Normal", "Poisson", "Beta-Posterior"),
             (COLORS["tnorm_ci"], COLORS["poisson_ci"], COLORS["posterior_ci"]),
             (
-                (self.pos_dist_tnorm, self.precision_dist_tnorm, self.npv_dist_tnorm,),
+                (self.pos_dist_tnorm, self.ppv_dist_tnorm, self.npv_dist_tnorm,),
                 (self.pos_dist_poisson, self.ppv_dist_poisson, self.npv_dist_poisson,),
                 (self.pos_dist_posterior, self.ppv_dist_posterior, self.npv_dist_posterior,),
             ),
