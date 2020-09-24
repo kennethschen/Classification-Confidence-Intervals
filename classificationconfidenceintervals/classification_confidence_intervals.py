@@ -181,7 +181,10 @@ class ClassificationConfidenceIntervals:
         phat = successes / size
         sigmahat = np.sqrt(phat * (1 - phat) / size)
         metric_dist_tnorm = st.truncnorm(
-            a=(phat - 1) / sigmahat, b=phat / sigmahat, loc=phat, scale=sigmahat,
+            a=(phat - 1) / sigmahat,
+            b=phat / sigmahat,
+            loc=phat,
+            scale=sigmahat,
         )
 
         metric_dist_poisson = st.poisson(successes)
@@ -194,9 +197,7 @@ class ClassificationConfidenceIntervals:
 
     def get_cis(
         self, n_iters: int = 1000000, plot_filename: str = ""
-    ) -> Tuple[
-        CIDataClass, CIDataClass, CIDataClass, CIDataClass,
-    ]:
+    ) -> Tuple[CIDataClass, CIDataClass, CIDataClass, CIDataClass]:
         """Get confidence intervals.
 
         Args:
@@ -388,7 +389,11 @@ class ClassificationConfidenceIntervals:
                     ys = dist.pmf(xs)
                     xs /= sizes[i]
                 else:
-                    xs = np.linspace(dist.ppf(lq), dist.ppf(uq), n_bins,)
+                    xs = np.linspace(
+                        dist.ppf(lq),
+                        dist.ppf(uq),
+                        n_bins,
+                    )
                     ys = dist.pdf(xs)
                     ys /= sum(ys)
                 axs[i].plot(xs, ys, color=COLORS[model], alpha=CONFIG["transparency"])
@@ -401,14 +406,22 @@ class ClassificationConfidenceIntervals:
             proportions = sorted(counts.keys())
             densities = np.array([counts[p] for p in proportions]) / sum(counts.values())
             axs[recall_idx].plot(
-                proportions, densities, color=COLORS[model], alpha=CONFIG["transparency"],
+                proportions,
+                densities,
+                color=COLORS[model],
+                alpha=CONFIG["transparency"],
             )
 
         # plot confidence intervals
         for key in CIDataClass.keys():
             model = key.split("_ci")[0]
             for i, ci in enumerate(
-                (pos_rate_cis.get(key), ppv_cis.get(key), npv_cis.get(key), recall_cis.get(key),)
+                (
+                    pos_rate_cis.get(key),
+                    ppv_cis.get(key),
+                    npv_cis.get(key),
+                    recall_cis.get(key),
+                )
             ):
                 label = MODEL_TO_LABEL[model]
                 axs[i].vlines(

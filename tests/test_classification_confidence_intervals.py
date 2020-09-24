@@ -158,7 +158,7 @@ def test_get_cis(
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, [], "test_plot"),
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, "string", "test_plot"),
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, -100, "test_plot"),
-        (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, {0: 400}, "test_plot",),
+        (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, {0: 400}, "test_plot"),
     ],
 )
 def test_bad_get_cis(
