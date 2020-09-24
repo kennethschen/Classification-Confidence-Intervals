@@ -235,9 +235,13 @@ def test_str_repr_del(
         confidence_level=confidence_level,
         exact_precision=exact_precision,
     )
+    pos_rate_cis, _, _, _ = classification_confidence_intervals.get_cis()
 
     assert (
         classification_confidence_intervals.__str__()
         == classification_confidence_intervals.__repr__()
     )
     del classification_confidence_intervals
+
+    assert pos_rate_cis.__str__() == pos_rate_cis.__repr__()
+    del pos_rate_cis

@@ -18,7 +18,7 @@ import seaborn as sns
 
 from .check_inputs import check_get_cis_params, check_init_params
 from .confidence_intervals_data_class import CIDataClass
-from .plot_config import COLORS, CONFIG
+from .plot_config import COLORS, CONFIG, MODEL_TO_LABEL
 from .read_only_properties_decorator import read_only_properties
 
 
@@ -33,12 +33,15 @@ from .read_only_properties_decorator import read_only_properties
     "n_pred_neg",
     "n_true_neg",
     "n_true_pos",
+    "npv_dist_binom",
     "npv_dist_poisson",
     "npv_dist_posterior",
     "npv_dist_tnorm",
+    "pos_dist_binom",
     "pos_dist_poisson",
     "pos_dist_posterior",
     "pos_dist_tnorm",
+    "ppv_dist_binom",
     "ppv_dist_poisson",
     "ppv_dist_posterior",
     "ppv_dist_tnorm",
@@ -63,7 +66,7 @@ class ClassificationConfidenceIntervals:
             sample_predictions (list): Binary labels of datapoints in sample flagged as positives
                 by algorithm, with labels as boolean or binary in [0,1] or in [-1,1].
             population_size (int): Size of population.
-            population_flagged_count, (int): Number of datapoints in population flagged as positives
+            population_flagged_count (int): Number of datapoints in population flagged as positives
                 by algorithm.
             confidence_level (float): Confidence level, equal to area desired under curve.
             exact_precision (float): If provided, the actual population precision.
@@ -79,18 +82,24 @@ class ClassificationConfidenceIntervals:
             n_pred_neg (int): Sample predicted negatives count.
             n_true_neg (int): Sample true negatives count.
             n_true_pos (int): Sample true positives count.
+            npv_dist_binom (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted binomial distribution for negative predictive value.
             npv_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted poisson distribution for negative predictive value.
             npv_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted posterior distribution for negative predictive value.
             npv_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted truncated normal distribution for negative predictive value.
+            pos_dist_binom (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted binomial distribution for positive rate.
             pos_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted poisson distribution for positive rate.
             pos_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted posterior distribution for positive rate.
             pos_dist_tnorm (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted truncated normal distribution for positive rate.
+            ppv_dist_binom (scipy.stats._distn_infrastructure.rv_frozen):
+                Fitted binomial distribution for precision.
             ppv_dist_poisson (scipy.stats._distn_infrastructure.rv_frozen):
                 Fitted poisson distribution for precision.
             ppv_dist_posterior (scipy.stats._distn_infrastructure.rv_frozen):
@@ -128,16 +137,19 @@ class ClassificationConfidenceIntervals:
         (
             self.pos_dist_tnorm,
             self.pos_dist_poisson,
+            self.pos_dist_binom,
             self.pos_dist_posterior,
         ) = self.get_parametric_distributions(self.n_pos, self.n)
         (
             self.ppv_dist_tnorm,
             self.ppv_dist_poisson,
+            self.ppv_dist_binom,
             self.ppv_dist_posterior,
         ) = self.get_parametric_distributions(self.n_true_pos, self.n_flagged)
         (
             self.npv_dist_tnorm,
             self.npv_dist_poisson,
+            self.npv_dist_binom,
             self.npv_dist_posterior,
         ) = self.get_parametric_distributions(self.n_true_neg, self.n_pred_neg)
 
@@ -145,6 +157,7 @@ class ClassificationConfidenceIntervals:
     def get_parametric_distributions(
         successes: int, size: int
     ) -> Tuple[
+        st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
         st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
         st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
         st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
@@ -173,9 +186,11 @@ class ClassificationConfidenceIntervals:
 
         metric_dist_poisson = st.poisson(successes)
 
+        metric_dist_binom = st.binom(n=size, p=phat)
+
         metric_dist_posterior = st.beta(a=0.5 + successes, b=0.5 + size - successes)
 
-        return metric_dist_tnorm, metric_dist_poisson, metric_dist_posterior
+        return metric_dist_tnorm, metric_dist_poisson, metric_dist_binom, metric_dist_posterior
 
     def get_cis(
         self, n_iters: int = 1000000, plot_filename: str = ""
@@ -189,17 +204,14 @@ class ClassificationConfidenceIntervals:
             plot_filename (str): If not empty, save plots using filename as relative path.
 
         Returns:
-            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple methods.
-            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple methods.
-            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple methods.
-            recall_cis (CIDataClass): Confidence intervals for recall based on multiple methods.
+            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple models.
+            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple models.
+            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple models.
+            recall_cis (CIDataClass): Confidence intervals for recall based on multiple models.
 
         """
         # check get_cis params
         check_get_cis_params(n_iters, plot_filename)
-
-        # MC simulation
-        self.run_simulations(n_iters)
 
         # get cis
         pos_rate_cis = self.get_pos_rate_cis()
@@ -209,12 +221,12 @@ class ClassificationConfidenceIntervals:
         else:
             exact_ppv_ci: Tuple[float, float] = tuple([self.exact_precision] * 2)  # type: ignore
             ppv_cis = CIDataClass(
-                exact_ppv_ci, exact_ppv_ci, exact_ppv_ci, exact_ppv_ci, exact_ppv_ci, exact_ppv_ci
+                exact_ppv_ci, exact_ppv_ci, exact_ppv_ci, exact_ppv_ci, exact_ppv_ci
             )
 
         npv_cis = self.get_npv_cis()
 
-        recall_cis = self.get_recall_cis(ppv_cis, npv_cis)
+        recall_cis = self.get_recall_cis(n_iters)
 
         # get plots
         if plot_filename:
@@ -222,30 +234,11 @@ class ClassificationConfidenceIntervals:
 
         return pos_rate_cis, ppv_cis, npv_cis, recall_cis
 
-    def run_simulations(self, n_iters: int) -> None:
-        """Run MC simulations and create simulated recall distribution.
-
-        Args:
-            n_iters (int): Number of iterations to simulate.
-
-        """
-        # pylint: disable=W0201
-        # simulated distributions based on posteriors
-        self.pos_hats = self.pos_dist_posterior.rvs(size=n_iters, random_state=10)
-        self.ppv_hats = self.ppv_dist_posterior.rvs(size=n_iters, random_state=10)
-        self.npv_hats = self.npv_dist_posterior.rvs(size=n_iters, random_state=10)
-
-        # simulated distribution for recall
-        self.tpr_hats = (self.N_flagged * self.ppv_hats) / (
-            self.N_flagged * self.ppv_hats + (self.N - self.N_flagged) * (1 - self.npv_hats)
-        )
-        # pylint: disable=W0201
-
     def get_pos_rate_cis(self) -> CIDataClass:
         """Get confidence intervals for positive rate.
 
         Returns:
-            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple methods.
+            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple models.
 
         """
         return CIDataClass(
@@ -254,14 +247,13 @@ class ClassificationConfidenceIntervals:
             self.binomial_likelihood_ratio_test_ci(self.n, self.n_pos, self.alpha),
             self.binomial_score_test_ci(self.n, self.n_pos, self.alpha),
             self.pos_dist_posterior.interval(self.alpha),
-            self.binomial_simulated_ci(self.pos_hats, self.alpha),
         )
 
     def get_ppv_cis(self) -> CIDataClass:
         """Get confidence intervals for precision.
 
         Returns:
-            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple methods.
+            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple models.
 
         """
         return CIDataClass(
@@ -270,14 +262,13 @@ class ClassificationConfidenceIntervals:
             self.binomial_likelihood_ratio_test_ci(self.n_flagged, self.n_true_pos, self.alpha),
             self.binomial_score_test_ci(self.n_flagged, self.n_true_pos, self.alpha),
             self.ppv_dist_posterior.interval(self.alpha),
-            self.binomial_simulated_ci(self.ppv_hats, self.alpha),
         )
 
     def get_npv_cis(self) -> CIDataClass:
         """Get confidence intervals for negative predictive value.
 
         Returns:
-            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple methods.
+            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple models.
 
         """
         return CIDataClass(
@@ -286,41 +277,70 @@ class ClassificationConfidenceIntervals:
             self.binomial_likelihood_ratio_test_ci(self.n_pred_neg, self.n_true_neg, self.alpha),
             self.binomial_score_test_ci(self.n_pred_neg, self.n_true_neg, self.alpha),
             self.npv_dist_posterior.interval(self.alpha),
-            self.binomial_simulated_ci(self.npv_hats, self.alpha),
         )
 
-    def get_recall_cis(self, ppv_cis: CIDataClass, npv_cis: CIDataClass,) -> CIDataClass:
-        """Get confidence intervals for recall.
+    def get_recall_cis(self, n_iters: int) -> CIDataClass:
+        """Get confidence intervals for recall using Monte Carlo simulations.
 
         Args:
-            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple methods.
-            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple methods.
+            n_iters (int): Number of iterations to simulate posterior models.
 
         Returns:
-            recall_cis (CIDataClass): Confidence intervals for recall based on multiple methods.
+            recall_cis (CIDataClass): Confidence intervals for recall based on multiple models.
 
         """
-        recall_cis: Dict[str, Tuple[float, float]] = {}
-
-        # distributional cis
-        for key in CIDataClass.keys():
-            a_min = min(ppv_cis.get(key)) * self.N_flagged
-            a_max = max(ppv_cis.get(key)) * self.N_flagged
-            b_min = min(1 - np.array(npv_cis.get(key))) * (self.N - self.N_flagged)
-            b_max = max(1 - np.array(npv_cis.get(key))) * (self.N - self.N_flagged)
-            ci = tuple([a_min / (a_min + b_max), a_max / (a_max + b_min)])
-            recall_cis[key] = ci  # type: ignore
-
-        # simulated cis
-        recall_cis["simulated_ci"] = self.binomial_simulated_ci(self.tpr_hats, self.alpha)
+        # pylint: disable=W0201
+        self.tpr_hats_tnorm = self.run_simulations(
+            self.ppv_dist_tnorm, self.npv_dist_tnorm, n_iters, False
+        )
+        self.tpr_hats_poisson = self.run_simulations(
+            self.ppv_dist_poisson, self.npv_dist_poisson, n_iters, True
+        )
+        self.tpr_hats_lrt = self.tpr_hats_score = self.run_simulations(
+            self.ppv_dist_binom, self.npv_dist_binom, n_iters, True
+        )
+        self.tpr_hats_posterior = self.run_simulations(
+            self.ppv_dist_posterior, self.npv_dist_posterior, n_iters, False
+        )
+        # pylint: disable=W0201
 
         return CIDataClass(
-            recall_cis["tnorm_ci"],
-            recall_cis["poisson_ci"],
-            recall_cis["lrt_ci"],
-            recall_cis["score_ci"],
-            recall_cis["posterior_ci"],
-            recall_cis["simulated_ci"],
+            self.simulated_ci(self.tpr_hats_tnorm, self.alpha),
+            self.simulated_ci(self.tpr_hats_poisson, self.alpha),
+            self.simulated_ci(self.tpr_hats_lrt, self.alpha),
+            self.simulated_ci(self.tpr_hats_score, self.alpha),
+            self.simulated_ci(self.tpr_hats_posterior, self.alpha),
+        )
+
+    def run_simulations(
+        self,
+        ppv_model: st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
+        npv_model: st._distn_infrastructure.rv_frozen,  # pylint: disable=W0212
+        n_iters: int,
+        counts_correction: bool,
+    ) -> np.array:
+        """Run MC simulation and create simulated recall distribution.
+
+        Args:
+            ppv_model (st._distn_infrastructure.rv_frozen): Fitted precision model.
+            npv_model (st._distn_infrastructure.rv_frozen): Fitted NPV model.
+            n_iters (int): Number of iterations to simulate.
+            counts_correction (bool): If distribution models counts instead of proportion parameter, set to True.
+
+        Returns:
+            tpr_hats (list): List of simulated recall values.
+
+        """
+        # simulated distributions based on posteriors
+        ppv_hats = ppv_model.rvs(size=n_iters, random_state=10)
+        npv_hats = npv_model.rvs(size=n_iters, random_state=10)
+
+        # simulated distribution for recall
+        if counts_correction:
+            ppv_hats = ppv_hats / self.n_flagged
+            npv_hats = npv_hats / self.n_pred_neg
+        return (self.N_flagged * ppv_hats) / (
+            self.N_flagged * ppv_hats + (self.N - self.N_flagged) * (1 - npv_hats)
         )
 
     def get_plots(
@@ -335,10 +355,10 @@ class ClassificationConfidenceIntervals:
 
         Args:
             plot_filename (str): Save plots using filename as relative path.
-            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple methods.
-            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple methods.
-            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple methods.
-            recall_cis (CIDataClass): Confidence intervals for recall based on multiple methods.
+            pos_rate_cis (CIDataClass): Confidence intervals for pos rate based on multiple models.
+            ppv_cis (CIDataClass): Confidence intervals for precision based on multiple models.
+            npv_cis (CIDataClass): Confidence intervals for NPV based on multiple models.
+            recall_cis (CIDataClass): Confidence intervals for recall based on multiple models.
 
         """
 
@@ -348,58 +368,59 @@ class ClassificationConfidenceIntervals:
         fig.suptitle(f"Metrics for {100*self.alpha}% Confidence Level")
         plt.xticks(np.arange(0, 1.05, 0.05), rotation=30)
         plt.xlim((0, 1))
+        recall_idx = 3
 
         # ci whitespaces
-        n_whitespaces = max([len(key) for key in CIDataClass.keys()])
+        n_whitespaces = max([len(label) for label in MODEL_TO_LABEL.values()])
 
-        # plot distributions
+        # plot exact distributions
         lq, uq, n_bins = CONFIG["lq"], CONFIG["uq"], CONFIG["n_bins"]
-        for label, color, distributions in zip(
-            ("Truncated-Normal", "Poisson", "Beta-Posterior"),
-            (COLORS["tnorm_ci"], COLORS["poisson_ci"], COLORS["posterior_ci"]),
-            (
-                (self.pos_dist_tnorm, self.ppv_dist_tnorm, self.npv_dist_tnorm,),
-                (self.pos_dist_poisson, self.ppv_dist_poisson, self.npv_dist_poisson,),
-                (self.pos_dist_posterior, self.ppv_dist_posterior, self.npv_dist_posterior,),
-            ),
-        ):
+
+        for model in ["tnorm", "poisson", "posterior"]:
+            distributions = [
+                getattr(self, f"pos_dist_{model}"),
+                getattr(self, f"ppv_dist_{model}"),
+                getattr(self, f"npv_dist_{model}"),
+            ]
+            sizes = (self.n, self.n_flagged, self.n - self.n_flagged)
             for i, dist in enumerate(distributions):
-                if label == "Poisson":
+                if model in ["binom", "poisson"]:
                     xs = np.arange(dist.ppf(lq), dist.ppf(uq))
                     ys = dist.pmf(xs)
-                    xs /= (self.n, self.n_flagged, self.n - self.n_flagged)[i]
+                    xs /= sizes[i]
                 else:
                     xs = np.linspace(dist.ppf(lq), dist.ppf(uq), n_bins,)
                     ys = dist.pdf(xs)
                     ys /= sum(ys)
-                axs[i].plot(xs, ys, color=color, alpha=CONFIG["transparency"], label=label)
+                axs[i].plot(xs, ys, color=COLORS[model], alpha=CONFIG["transparency"])
 
-        # simulated distributions
-        for i, hats in enumerate((self.pos_hats, self.ppv_hats, self.npv_hats, self.tpr_hats)):
-            counts = Counter(np.round(hats, CONFIG["rounding_digits"]))  # type: ignore
+        # plot simulated recall distributions
+        for model in ["tnorm", "posterior"]:
+            # model = key.split("_ci")[0]
+            counts: Dict[int, int] = Counter(
+                np.round(getattr(self, f"tpr_hats_{model}"), CONFIG["rounding_digits"])
+            )
             proportions = sorted(counts.keys())
             densities = np.array([counts[p] for p in proportions]) / sum(counts.values())
-            axs[i].plot(
-                proportions,
-                densities,
-                color=COLORS["simulated_ci"],
-                alpha=CONFIG["transparency"],
-                label="MC Simulations",
+            axs[recall_idx].plot(
+                proportions, densities, color=COLORS[model], alpha=CONFIG["transparency"],
             )
 
-        # confidence intervals
+        # plot confidence intervals
         for key in CIDataClass.keys():
+            model = key.split("_ci")[0]
             for i, ci in enumerate(
                 (pos_rate_cis.get(key), ppv_cis.get(key), npv_cis.get(key), recall_cis.get(key),)
             ):
+                label = MODEL_TO_LABEL[model]
                 axs[i].vlines(
                     x=ci,
                     ymin=0,
                     ymax=max(axs[i].get_ylim()),
                     linestyles="--",
-                    colors=COLORS[key],
+                    colors=COLORS[model],
                     alpha=CONFIG["transparency"],
-                    label=f"{key}: {' ' * (n_whitespaces - len(key))}" f"{np.round(ci, 4)}",
+                    label=f"{label}: {' ' * (n_whitespaces - len(label))}{np.round(ci, 4)}",
                 )
 
         # legend and title
@@ -414,7 +435,7 @@ class ClassificationConfidenceIntervals:
 
     @staticmethod
     def binomial_poisson_approx_ci(n: int, dist: st.poisson, alpha: float) -> Tuple[float, float]:
-        """Invoke poisson approximation to binomial to get confidence intervals.
+        """Invoke poisson approximation to binomial to get confidence intervals for proportion parameter.
 
         Args:
             n (int): Total sample size from which poisson distribution was fitted.
@@ -426,22 +447,6 @@ class ClassificationConfidenceIntervals:
 
         """
         ci: Tuple[float, float] = tuple(np.array(dist.interval(alpha)) / n)  # type: ignore
-        return ci
-
-    @staticmethod
-    def binomial_simulated_ci(hats: List[float], alpha: float) -> Tuple[float, float]:
-        """Draw quantiles from simulations to get confidence intervals.
-
-        Args:
-            hats (list): List of simulated estimates for parameter.
-            alpha (float): Confidence level, equal to area desired under curve.
-
-        Returns:
-            ci (list): Confidence interval based on drawing quantiles from simulations.
-
-        """
-        area = 100 * (1 - alpha) / 2
-        ci: Tuple[float, float] = tuple(np.percentile(hats, [area, 100 - area]))  # type: ignore
         return ci
 
     @staticmethod
@@ -494,6 +499,22 @@ class ClassificationConfidenceIntervals:
                 valid_p0s.append(p0)
 
         ci: Tuple[float, float] = (valid_p0s[0], valid_p0s[-1])
+        return ci
+
+    @staticmethod
+    def simulated_ci(hats: List[float], alpha: float) -> Tuple[float, float]:
+        """Draw quantiles from simulations to get confidence intervals.
+
+        Args:
+            hats (list): List of simulated estimates for parameter.
+            alpha (float): Confidence level, equal to area desired under curve.
+
+        Returns:
+            ci (list): Confidence interval based on drawing quantiles from simulations.
+
+        """
+        area = 100 * (1 - alpha) / 2
+        ci: Tuple[float, float] = tuple(np.percentile(hats, [area, 100 - area]))  # type: ignore
         return ci
 
     def __repr__(self) -> str:

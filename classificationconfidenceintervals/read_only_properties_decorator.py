@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def read_only_properties(*attrs: str) -> CustomClass:  # type: ignore # pylint: disable=E0602 # noqa: F821, E501
+def read_only_properties(*attrs: str) -> "CustomClass":  # type: ignore # pylint: disable=E0602 # noqa: F821, E501
     """Read only properties decorator.
 
     Args:
@@ -24,7 +24,7 @@ def read_only_properties(*attrs: str) -> CustomClass:  # type: ignore # pylint: 
 
     """
 
-    def class_rebuilder(cls) -> CustomClass:  # type: ignore # noqa: F821
+    def class_rebuilder(cls) -> "CustomClass":  # type: ignore # noqa: F821
         """Rebuild class.
 
         Args:
