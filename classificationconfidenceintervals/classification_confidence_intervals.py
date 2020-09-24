@@ -395,7 +395,7 @@ class ClassificationConfidenceIntervals:
                 axs[i].plot(xs, ys, color=COLORS[model], alpha=CONFIG["transparency"])
 
         # plot simulated recall distributions
-        for model in ["tnorm", "posterior"]:
+        for model in ["tnorm", "poisson", "posterior"]:
             # model = key.split("_ci")[0]
             counts: Dict[int, int] = Counter(
                 np.round(getattr(self, f"tpr_hats_{model}"), CONFIG["rounding_digits"])
