@@ -10,7 +10,7 @@ Default plot parameters for ClassificationConfidenceIntervals.get_plots method.
 lq = 0.000001
 CONFIG = {
     "n_subplots": 4,
-    "fontsize": 8,
+    "fontsize": 10,
     "transparency": 0.65,
     "lq": lq,
     "uq": 1 - lq,
