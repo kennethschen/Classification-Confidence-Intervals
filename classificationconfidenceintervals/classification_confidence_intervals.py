@@ -375,7 +375,6 @@ class ClassificationConfidenceIntervals:
 
         # plot exact distributions
         lq, uq, n_bins = CONFIG["lq"], CONFIG["uq"], CONFIG["n_bins"]
-
         for model in ["tnorm", "poisson", "posterior"]:
             distributions = [
                 getattr(self, f"pos_dist_{model}"),
@@ -396,7 +395,6 @@ class ClassificationConfidenceIntervals:
 
         # plot simulated recall distributions
         for model in ["tnorm", "poisson", "posterior"]:
-            # model = key.split("_ci")[0]
             counts: Dict[int, int] = Counter(
                 np.round(getattr(self, f"tpr_hats_{model}"), CONFIG["rounding_digits"])
             )
