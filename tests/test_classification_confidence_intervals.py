@@ -158,7 +158,7 @@ def test_get_cis(
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, [], "test_plot"),
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, "string", "test_plot"),
         (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, -100, "test_plot"),
-        (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, {0: 400}, "test_plot",),
+        (valid_sl, valid_sp, valid_ps, valid_pfc, valid_cl, valid_ep, {0: 400}, "test_plot"),
     ],
 )
 def test_bad_get_cis(
@@ -235,9 +235,13 @@ def test_str_repr_del(
         confidence_level=confidence_level,
         exact_precision=exact_precision,
     )
+    pos_rate_cis, _, _, _ = classification_confidence_intervals.get_cis()
 
     assert (
         classification_confidence_intervals.__str__()
         == classification_confidence_intervals.__repr__()
     )
     del classification_confidence_intervals
+
+    assert pos_rate_cis.__str__() == pos_rate_cis.__repr__()
+    del pos_rate_cis

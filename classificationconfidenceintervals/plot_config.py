@@ -11,7 +11,7 @@ lq = 0.000001
 CONFIG = {
     "n_subplots": 4,
     "fontsize": 8,
-    "transparency": 0.7,
+    "transparency": 0.65,
     "lq": lq,
     "uq": 1 - lq,
     "n_bins": 100,
@@ -20,10 +20,18 @@ CONFIG = {
 }
 
 COLORS = {
-    "tnorm_ci": "red",
-    "poisson_ci": "orange",
-    "lrt_ci": "gold",
-    "score_ci": "purple",
-    "posterior_ci": "blue",
-    "simulated_ci": "green",
+    "tnorm": "red",
+    "poisson": "orange",
+    "lrt": "purple",
+    "binom": "green",
+    "score": "green",
+    "posterior": "blue",
+}
+
+MODEL_TO_LABEL = {
+    "tnorm": "Truncated-Normal",
+    "poisson": "Poisson",
+    "lrt": "LRT",
+    "score": "Score",
+    "posterior": "Beta-Posterior",
 }

@@ -29,13 +29,13 @@ respectively.
 * **Positive Rate:** (TP+FN) / (TP+FN+FP+TN)
 * **Precision (PPV):** (TP) / (TP+FP)
 * **Negative Predictive Value (NPV):** (TN) / (TN+FN)
-* **Recall** (TP) / (TP+FN)
+* **Recall**: (TP) / (TP+FN)
 
 If helpful, see the precision recall image [here](https://github.com/kennethschen/Classification-Confidence-Intervals/blob/master/images/precision_recall_image.png).
 
 ## Usage
 
-The relevant class is [**ClassificationConfidenceIntervals**](https://github.com/kennethschen/Classification-Confidence-Intervals/blob/master/src/classification_confidence_intervals.py).
+The relevant class is [**ClassificationConfidenceIntervals**](https://github.com/kennethschen/Classification-Confidence-Intervals/blob/master/classificationconfidenceintervals/classification_confidence_intervals.py).
 
 ### Installation
 
@@ -57,7 +57,7 @@ Args:
 * **sample_predictions (list):** Binary labels of datapoints in sample flagged as positives
     by algorithm, with labels as boolean or binary in [0,1] or in [-1,1].
 * **population_size (int):** Size of population.
-* **population_flagged_count, (int):** Number of datapoints in population flagged as positives
+* **population_flagged_count (int):** Number of datapoints in population flagged as positives
     by algorithm.
 * **confidence_level (float):** Confidence level, equal to area desired under curve.
 * **exact_precision (float):** If provided, the actual population precision.
@@ -73,7 +73,7 @@ Args:
 ... )
 ```
 
-With regards to your labled sample, in the example above using fake labels and predictions,
+With regards to your labeled sample, in the example above using fake labels and predictions,
 **sample_labels** refer to the truth values of each datapoint (the 1st to 3rd datapoint are
 positives; the 4th to 8th datapoints are negatives). **sample_predictions** refer to whether or not your
 algorithm flagged each datapoint (the 1st, 2nd, 5th, and 6th datapoints were flagged; the 3rd, 4th, 7th, and 8th
@@ -117,16 +117,16 @@ Returns:
 ```python
 >>> pos_rate_cis, ppv_cis, npv_cis, recall_cis = confidenceintervals.get_cis(n_iters=100000, plot_filename='example_metrics_plot')
 >>> print(pos_rate_cis)
-read_only_properties.<locals>.class_rebuilder.<locals>.CustomClass(tnorm_ci=(0.31375112548312334, 0.43624887451687666), poisson_ci=(0.3, 0.45416666666666666), lrt_ci=(0.3154, 0.4373), score_ci=(0.3162, 0.43770000000000003), posterior_ci=(0.3155447558316776, 0.4374497740783102), simulated_ci=(0.3159835357403228, 0.4374219880675257))
+CustomClass(tnorm_ci=(0.31375112548312334, 0.43624887451687666), poisson_ci=(0.3, 0.45416666666666666), lrt_ci=(0.3154, 0.4373), score_ci=(0.3162, 0.43770000000000003), posterior_ci=(0.3155447558316776, 0.4374497740783102), simulated_ci=(0.3159835357403228, 0.4374219880675257))
 >>> print(ppv_cis)
-read_only_properties.<locals>.class_rebuilder.<locals>.CustomClass(tnorm_ci=(0.41054029281414217, 0.5894597071858578), poisson_ci=(0.375, 0.6333333333333333), lrt_ci=(0.4113, 0.5887), score_ci=(0.41200000000000003, 0.588), posterior_ci=(0.41143373746262163, 0.5885662625373784), simulated_ci=(0.4119916854809507, 0.5890112681445884))
+CustomClass(tnorm_ci=(0.41054029281414217, 0.5894597071858578), poisson_ci=(0.375, 0.6333333333333333), lrt_ci=(0.4113, 0.5887), score_ci=(0.41200000000000003, 0.588), posterior_ci=(0.41143373746262163, 0.5885662625373784), simulated_ci=(0.4119916854809507, 0.5890112681445884))
 >>> print(npv_cis)
-read_only_properties.<locals>.class_rebuilder.<locals>.CustomClass(tnorm_ci=(0.6725256210456648, 0.8274743790402173), poisson_ci=(0.6, 0.9083333333333333), lrt_ci=(0.6678000000000001, 0.8216), score_ci=(0.6656, 0.8189000000000001), posterior_ci=(0.667214568760124, 0.8208930781209349), simulated_ci=(0.6675875145345339, 0.8210540703047337))
+CustomClass(tnorm_ci=(0.6725256210456648, 0.8274743790402173), poisson_ci=(0.6, 0.9083333333333333), lrt_ci=(0.6678000000000001, 0.8216), score_ci=(0.6656, 0.8189000000000001), posterior_ci=(0.667214568760124, 0.8208930781209349), simulated_ci=(0.6675875145345339, 0.8210540703047337))
 >>> print(recall_cis)
-read_only_properties.<locals>.class_rebuilder.<locals>.CustomClass(tnorm_ci=(0.5562766006133449, 0.7735840644338399), poisson_ci=(0.4838709677419355, 0.8735632183908046), lrt_ci=(0.5531943510423672, 0.767435797158128), score_ci=(0.5519828510182208, 0.7645299700949162), posterior_ci=(0.5528394789668374, 0.7666885785320019), simulated_ci=(0.5856829486565244, 0.7438937436565682))
+CustomClass(tnorm_ci=(0.5562766006133449, 0.7735840644338399), poisson_ci=(0.4838709677419355, 0.8735632183908046), lrt_ci=(0.5531943510423672, 0.767435797158128), score_ci=(0.5519828510182208, 0.7645299700949162), posterior_ci=(0.5528394789668374, 0.7666885785320019), simulated_ci=(0.5856829486565244, 0.7438937436565682))
 ```
 
-The **CIDataClass** is a modified class that supports dot notation access and forces the returned
+The **CustomClass** is a modified class that supports dot notation access and forces the returned
 confidence intervals to be read-only.
 
 ```python
@@ -136,7 +136,7 @@ confidence intervals to be read-only.
 AttributeError: Can't modify tnorm_ci
 ```
 
-For variable access, a **get()** method is provided as well in **CIDataClass**.
+For variable access, a **get()** method is provided as well.
 
 ```python
 >>> key = "tnorm_ci"
@@ -147,7 +147,7 @@ For variable access, a **get()** method is provided as well in **CIDataClass**.
 ### Visualization
 
 If **plot_filename** is not an empty string when running **get_cis()**, you will have an image file
-located at **plot_filename**.png. An example is provided below.
+located at <**plot_filename**>.png. An example is provided below.
 
 ![](images/example_metrics_plot.png)
 
@@ -210,19 +210,16 @@ is used in this package.
 * **Beta-Posterior:** A Beta-Posterior distribution with the Beta distribution as the conjugate
     prior to the Binomial distribution.
 
-#### Approximating distribution:
+Specifically, 
 
-This model approximates the Beta-Posterior distribution as the number of Monte Carlo draws grows.
-
-* **Simulated Distribution:** A non-parametric distribution created from Monte Carlo samples from the
-Beta-Posterior distribution.
+<p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/beta_posterior.png" height="45%" width="45%" alt="Beta-Binomial Conjugacy"></p>
 
 ## Confidence Interval Methods
 
 The models above are used to obtain confidence intervals for each of the metrics in three ways.
 For ease of discussion, confidence intervals also refer to credible intervals under the Bayesian
 framework. This section focuses on derivations, not proofs, the latter of which are
-readily available at online sources.
+readily available on online sources.
 
 ### Distributional Confidence Intervals (Truncated-Normal, Poisson, Beta-Posterior)
 
@@ -232,32 +229,11 @@ Given *c*=**confidence_level**, confidence intervals are drawn from the quantile
 probability mass/density function such that the center (**confidence_level**)% of area lies
 within the confidence interval.
 
-For the Poisson model, an extra adjustment is performed.
+For the Poisson model, an extra adjustment is performed because it does not model the proportion paramater directly.
 The support represents the count of successes and is divided by
 the model's relevant sample size to map to proportions;
 
 <p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/poisson_to_prop.png" height="60%" width="60%" alt="Proportion Confidence Intervals under Poisson Distribution"></p>
-
-#### Recall
-
-For recall, let *X<sub>m* be the precision distribution under model *m* and
-*Y<sub>m* be the NPV distribution under model *m*. Let *N* be the population size. Let
-*N<sub>f* be number of datapoints in population flagged as positives by the algorithm.
-Then, for model *m*, the population recall is
-*X<sub>m* *N<sub>f* / (*X<sub>m* *N<sub>f* + *Y<sub>m* (*N*-*N<sub>f*)).
-
-There is no clean distributional form for recall due to dependence between the numerator and denominator,
-but the confidence interval for recall is obtainable by optimizing
-for the endpoints of the confidence interval for recall using *X<sub>m* and *Y<sub>m*.
-Let *X<sub>m,l* and *X<sub>m,h* be the respective lower and upper bounds of the confidence interval
-for *X<sub>m*. Then the confidence intervals for population recall are:
-
-<p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/recall_parametric.png" height="70%" width="70%" alt="Parametric Population Recall Confidence Intervals"></p>
-
-Independence between *X<sub>m* and *Y<sub>m* grants the ability to use each each distribution's confidence intervals without
-concern for dependence effects. Had recall been defined as **precision** / **positives**, the
-parameters of the two distributions are not independent and confidence intervals could not
-be created in the above manner.
 
 ### Hypothesis Test Inversion Confidence Intervals (Binomial)
 
@@ -286,34 +262,33 @@ the confidence intervals for the LRT and Score Test are respectively given by ta
 
 <p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/ll_score_cis.png" height="25%" width="25%" alt="Inverted LRT and Score Confidence Intervals"></p>
 
-#### Recall
-
-For recall, the same logic follows as for distributional confidence intervals.
-
-### Simulated Confidence Intervals (Simulated)
-
-#### Positive Rate, Precision, and NPV
-
-Given **confidence_level**, confidence intervals are drawn from the quantiles of the Monte Carlo
-simulated draws from the Beta-Posterior such that the center (**confidence_level**)% of area lies
-within the confidence interval.
+### Simulated Confidence Intervals (Truncated-Normal, Poisson, Beta-Posterior)
 
 #### Recall
 
-For recall, let *p|X* be the Beta-Posterior distribution for precision,
-where *X* is the observed binary labeled data, as such:
-
-<p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/beta_posterior.png" height="45%" width="45%" alt="Beta-Binomial Conjugacy"></p>
-
-Let *p|Y* similarly be the Beta-Posterior distribution for NPV.
-
-Let *R<sup>(i)* be the *i*'th Monte Carlo sample value for population recall. Let *N* be the population size. Let
+For recall, let *X<sub>m* be the precision distribution under model *m* and
+*Y<sub>m* be the NPV distribution under model *m*. Let *N* be the population size. Let
 *N<sub>f* be number of datapoints in population flagged as positives by the algorithm.
-Then, based on the independent draws for *p|X* and *p|Y* on the *i*'th iteration:
+Then, for model *m*, the population recall is
+*X<sub>m* *N<sub>f* / (*X<sub>m* *N<sub>f* + (1-*Y<sub>m*) (*N*-*N<sub>f*)).
+
+There is no clean distributional form for recall due to dependence between the numerator and denominator.
+However, Monte Carlo simulations can be performed due to independence between *X<sub>m* and *Y<sub>m*.
+
+Let *R<sup>(i)* be the *i*'th Monte Carlo sample value for population recall.
+Then, based on the independent draws for *X<sup>(i)* and *Y<sup>(i)* on the *i*'th iteration:
 
 <p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/recall_nonparametric.png" height="40%" width="40%" alt="Non-Parametric Population Recall Confidence Intervals"></p>
 
-from which quantiles are drawn.
+from which quantiles are drawn. That is, given **confidence_level**, confidence intervals are drawn from the quantiles of the Monte Carlo
+simulated draws from the model such that the center (**confidence_level**)% of draws lies within the confidence interval.
+
+
+
+Note: Had recall been defined as a fraction of two distributions **true positives** / **positives**, the
+parameters of the two distributions are not independent we could not perform independent draws under Monte Carlo.
+On top of that, we would have to know the number of positives in the dataset in advance, when the premise of this package
+states that we do not have completely labeled data (and thus are using samples).
 
 ## Appendix
 
