@@ -175,10 +175,9 @@ any of the non-Poisson confidence intervals (as they are all similar).
 ## Models
 
 For the four metrics of interest, the following models are used. Please note that all models
-are fitted for **Positive Rate**, **Precision**, and **NPV**. The only
-model used for **Recall** is the Simulated Distribution. As discussed [below](#Confidence-Interval-Methods),
-no parametric distributions can be fit on recall due to independence constraints for calculating confidence
-intervals.
+are fitted for **Positive Rate**, **Precision**, and **NPV**. **Precision** and **NPV** models are used in turn
+for simulating Monte Carlo distributions for **Recall**. As discussed [below](#Confidence-Interval-Methods),
+no parametric distributions can be fit on recall due to dependence.
 
 ### Frequentist Models:
 
@@ -278,12 +277,10 @@ However, Monte Carlo simulations can be performed due to independence between *X
 Let *R<sup>(i)* be the *i*'th Monte Carlo sample value for population recall.
 Then, based on the independent draws for *X<sup>(i)* and *Y<sup>(i)* on the *i*'th iteration:
 
-<p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/recall_nonparametric.png" height="40%" width="40%" alt="Non-Parametric Population Recall Confidence Intervals"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/kennethschen/Classification-Confidence-Intervals/master/images/recall_nonparametric.png" height="45%" width="45%" alt="Non-Parametric Population Recall Confidence Intervals"></p>
 
 from which quantiles are drawn. That is, given **confidence_level**, confidence intervals are drawn from the quantiles of the Monte Carlo
 simulated draws from the model such that the center (**confidence_level**)% of draws lies within the confidence interval.
-
-
 
 Note: Had recall been defined as a fraction of two distributions **true positives** / **positives**, the
 parameters of the two distributions are not independent we could not perform independent draws under Monte Carlo.
